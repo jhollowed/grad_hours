@@ -8,8 +8,8 @@ from pendulum import date
 from pendulum import datetime
 import matplotlib.pyplot as plt
 
-def moving_average(x, w):
-    return np.convolve(x, np.ones(w), 'valid') / w
+window_arg = int(sys.argv[1])
+print('\n ---- window={}'.format(window_arg))
 
 stop = pendulum.now()
 years_back = 4
@@ -99,11 +99,13 @@ while(update_entries):
 # organize projects into just these 3 "keepers"
 # be smart about some categories, randomly assign hours from others
 # (there are very few of these)
-keep_proj = ['Research', 'Coursework', 'GSI'][::-1]
+keep_proj = ['Research', 'Coursework', 'Teaching']
 all_proj = np.unique(project)
+np.random.seed(0)
 for i in range(len(project)):
     if(project[i]== 'FV3'): project[i] = 'Research'
     elif(project[i]== 'CLDERA'): project[i] = 'Research'
+    elif(project[i]== 'GSI'): project[i] = 'Teaching'
     elif(project[i] not in keep_proj): project[i] = keep_proj[np.random.randint(0,3)]
 
 # group each entry by date to get total daily hours per project
@@ -130,7 +132,7 @@ tot_cumul_hours = np.cumsum(hours_per_day, axis=0)
 hours_per_day_tot = np.sum(hours_per_day, axis=1)
 hours_per_day_rolling = np.zeros(hours_per_day.shape)
 
-window = int(sys.argv[1])
+window = window_arg
 #window = 7
 weight = 7/window
 for i in range(len(keep_proj)):
@@ -153,10 +155,10 @@ fig = plt.figure(figsize=(10, 3))
 ax = fig.add_subplot(111)
 ax2 = ax.twinx()
 
-colors = ['orange', 'c', 'm'][::-1] 
+colors = ['orange', 'c', 'm']
 for i in range(len(keep_proj)):
     p = ax.plot(all_dates_obj, hours_per_day_rolling[:,i], color=colors[i], 
-                label='{} rolling weekly'.format(keep_proj[i]))[0]
+                label='{} rolling weekly mean'.format(keep_proj[i]))[0]
     ax2.plot(all_dates_obj, tot_cumul_hours[:,i], color=p.get_color(), 
              ls='-', alpha=0.5, lw=1.0,
              label='{} cumulative'.format(keep_proj[i]))
@@ -167,13 +169,13 @@ for year in unique_years:
     mask = np.array([d.year == year for d in all_dates_obj])
     p = ax.plot(np.array(all_dates_obj)[mask], 
                 np.ones(len(np.array(all_dates)[mask]))*np.mean(hours_per_day_rolling_tot[mask]), 
-                'k--', lw=1.2)[0] 
-    if(year == 2022): p.set_label('cal. year means')
+                'k--', lw=1.1, zorder=0)[0] 
+    if(year == 2022): p.set_label('cal. yearly means')
 
 ax.grid(alpha=0.2)
-ax.legend()
+ax.legend(loc='upper left')
 ax.set_xlim([all_dates_obj[0], all_dates_obj[-1]])
 ax.set_ylim([0, 62])
 ax2.set_ylim([0, 1100])
 plt.tight_layout()
-plt.savefig('./figs/{}.png'.format(window))
+plt.savefig('./figs/{:03d}.png'.format(window), dpi=150)
